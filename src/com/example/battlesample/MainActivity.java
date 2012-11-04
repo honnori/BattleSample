@@ -1,22 +1,21 @@
 package com.example.battlesample;
 
+import java.util.ArrayList;
+
 import android.os.Bundle;
-import android.os.Handler;
 import android.app.Activity;
 import android.content.Context;
-import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
-import android.view.View.OnTouchListener;
 import android.widget.RelativeLayout;
 
-public class MainActivity extends Activity implements OnTouchListener{
+public class MainActivity extends Activity {
 
 	private BattleLayout vgroup;
 
 	// カードの表示部品（card.xml）
-	private View viewCard = null;
+//	private View viewCard = null;
+	private ArrayList<BattleCard> viewCardList = new ArrayList<BattleCard>();
 
 	// カード詳細表示部品(carddetail.xml)
 	private View viewCardDerail = null;
@@ -26,8 +25,11 @@ public class MainActivity extends Activity implements OnTouchListener{
 		super.onCreate(savedInstanceState);
 		this.setContentView(R.layout.activity_main);
 		
+		this.displayCards(38, 18);
+		this.displayCards(36, 16);
+		this.displayCards(34, 14);
+		this.displayCards(32, 12);
 		this.displayCards(30, 10);
-		
 		
 	}
 	
@@ -40,16 +42,17 @@ public class MainActivity extends Activity implements OnTouchListener{
 		
 		
 		// CARD用View取得
-		this.viewCard = ((LayoutInflater) this
+		View viewCard = ((LayoutInflater) this
 				.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(
 				R.layout.card, null);
-		
-		// OntouchListnerにActivityクラスを設定
-		this.viewCard.setOnTouchListener(this);
+		// カードビュークラスにActivityを渡す
+		((BattleCard) viewCard).setControlActivity(this);
+
+		// カードインスタンスを変数として保持する
+		this.viewCardList.add((BattleCard)viewCard);
 		
 		// カードを長押しした場合のイベントリスナ
-		final Activity act = this;
-		this.viewCard.setOnLongClickListener(new View.OnLongClickListener() {
+		viewCard.setOnLongClickListener(new View.OnLongClickListener() {
 			@Override
 			public boolean onLongClick(View v) {
 				
@@ -59,7 +62,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 				return false;
 			}
 		});
-
+		
 		// Densityの値を取得
 		float tmpDensity = this.getResources().getDisplayMetrics().density;
 		
@@ -74,43 +77,11 @@ public class MainActivity extends Activity implements OnTouchListener{
 		BattleLayout vgroup = (BattleLayout)this.findViewById(R.id.battle_base_layout);
 
 		// 戦闘ベース部品にcard追加する
-		vgroup.addView(this.viewCard, cartParams);
+		vgroup.addView(viewCard, cartParams);
 		
 	}
 	
-	
-	/**
-	 * カードを指定座標に配置する
-	 * @param left
-	 * @param top
-	 */
-	private void moveCard(int width, int height) {
-		
 
-		Log.d("★", "getAction()" + "■ACTION_MOVE" + " width:" + width + "  height:" + height);
-
-		// Densityの値を取得
-		float tmpDensity = this.getResources().getDisplayMetrics().density;
-
-		// カードを押さえてカードより上の座標ずらしたら、カードを上にずらす。
-		if (height <= 0) {
-			BattleLayout.LayoutParams params = (BattleLayout.LayoutParams)this.viewCard.getLayoutParams();
-			params.setMargins((int)(10*tmpDensity), (int)((380 - 20)* tmpDensity), 0, 0);
-			this.viewCard.setLayoutParams(params);
-
-		}
-
-		// カードを押さえてカードより下の座標にずらしたらカードを元の位置にに戻す
-		if (height >= viewCard.getHeight()) {
-			BattleLayout.LayoutParams params = (BattleLayout.LayoutParams)this.viewCard.getLayoutParams();
-			params.setMargins((int)(10*tmpDensity), (int)((380)* tmpDensity), 0, 0);
-			this.viewCard.setLayoutParams(params);
-		}
-		this.viewCard.invalidate();
-
-	}
-	
-	
 	/**
 	 * カード詳細を画面に表示する
 	 * @param left
@@ -142,11 +113,11 @@ public class MainActivity extends Activity implements OnTouchListener{
 		this.vgroup.addView(this.viewCardDerail, cartParams);
 		
 	}
-	
+
 	/**
 	 * カード詳細を消す
 	 */
-	private void invisibleCardDetail() {
+	public void invisibleCardDetail() {
 		
 		if (vgroup == null) {
 			return;
@@ -156,139 +127,10 @@ public class MainActivity extends Activity implements OnTouchListener{
 		// 画面再描画を要求
 		this.vgroup.invalidate();
 	}
-
-
-
-	@Override
-	public boolean onTouch(View view, MotionEvent event) {
-		
-		int action = event.getAction();
-
-		switch(action & MotionEvent.ACTION_MASK) {
-		case MotionEvent.ACTION_DOWN:
-		case MotionEvent.ACTION_POINTER_DOWN:
-			Log.d("TouchEvent", "getAction()" + "■ACTION_DOWN");
-			break;
-		case MotionEvent.ACTION_UP:
-		case MotionEvent.ACTION_POINTER_UP:
-			Log.d("TouchEvent", "getAction()" + "■ACTION_UP");
-			// 詳細画面表示を消す
-			this.invisibleCardDetail();
-			
-			break;
-		case MotionEvent.ACTION_MOVE:
-			
-			// ボタンが押されている場所にカードを移動する。
-			this.moveCard((int)(event.getX()), (int)(event.getY()));
-			
-			break;
-		}
-		return false;
-	}
-
+	
+	
 	
 	// カードが移動するアニメーションを作ってみる　利用したのは、ハンドラーの遅延でスレッド仕込むやつ。
-	
-	private boolean status = false;
-	
-	// ハンドラーを取得
-	private Handler mHandler = new Handler();
-	
-	// 移動の開始位置と終了位置を設定しておく
-	private int startPosLeft = 0;
-	private int startPosTop = 0;
-	private int stopPosLeft = 0;
-	private int stopPosTop = 0;
-
-	private int counter = 0;
-	private int baseLeft = 0;
-	private int baseTop = 0;
-	
-	// 定期的に呼び出されるためのRunnnableのインナークラス定義
-	private Runnable mUpdateTimeTask = new Runnable() {
-		public void run() {
-			
-			// 移動中の表示回数
-			int time = 5;
-			
-			// 座標移動
-			// 状態
-			if (status == false) {
-				// 最初だけ実施する
-				// 座標の差分を算出
-				int sabunLeft = stopPosLeft - startPosLeft;
-				int sabunTop = stopPosTop - startPosTop;
-				baseLeft = sabunLeft/time;
-				baseTop = sabunTop/time;
-				
-				// 状態を（移動）に設定
-				status = true;
-			}
-			
-			int posLeft = startPosLeft + counter * baseLeft;
-			int posTop = startPosTop + counter * baseTop;
-
-			Log.d("★★★★", "status:" + status + " posLeft:" + posLeft + " posTop:" + posTop);
-
-			// Densityの値を取得
-			float tmpDensity = getResources().getDisplayMetrics().density;
-
-			BattleLayout.LayoutParams params = (BattleLayout.LayoutParams)viewCard.getLayoutParams();
-			
-			if (counter <= time) {
-				params.setMargins((int)(posLeft*tmpDensity), (int)(posTop*tmpDensity), 0, 0);
-				
-				// 100ms後に、コールバックメソッド（自メソッド）を実行するように設定
-				mHandler.postDelayed(mUpdateTimeTask, 10);
-				
-				counter++;
-			}
-			else {
-				posLeft = stopPosLeft;
-				posTop = stopPosTop;
-				params.setMargins((int)(posLeft*tmpDensity), (int)(posTop*tmpDensity), 0, 0);
-				
-				// 停止処理
-				stopMovingCard();
-				counter = 0;
-			}
-			
-			// カードの位置確定と表示
-			viewCard.setLayoutParams(params);
-			viewCard.invalidate();
-		}
-	};
-
-	/**
-	 * カード移動開始
-	 */
-	private void startMovingCard(int startX, int startY, int stopX, int stopY){
-		
-		this.startPosLeft = startX;
-		this.startPosTop = startY;
-		this.stopPosLeft = stopX;
-		this.stopPosTop = stopY;
-
-		// 新たなハンドラを追加する前に、ハンドラにある既存のコールバックをすべて削除
-		this.mHandler.removeCallbacks(this.mUpdateTimeTask);
-
-		// Handler に対し、" 100 ms 後に mUpdateTimeTask() を呼び出す
-		this.mHandler.postDelayed(this.mUpdateTimeTask, 10);
-		
-		
-	}
-	
-	/**
-	 * カード移動停止(途中も可能)
-	 */
-	private void stopMovingCard(){
-		
-		// キューに溜まって待ち状態のコールバックイベントをキャンセルする
-		this.mHandler.removeCallbacks(this.mUpdateTimeTask);
-		
-		status = false;
-		
-	}
 	
 	/**
 	 * 配るボタン押下時に呼ばれる
@@ -296,9 +138,28 @@ public class MainActivity extends Activity implements OnTouchListener{
 	 */
 	public void onClickButton(View v) {
 		
-		// 移動する的なやつにする。
-		this.startMovingCard(30, 10, 10, 380);
-		
+		// スレッド起動
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				
+				try {
+					// 5枚移動する的なやつにする。
+					viewCardList.get(0).startMovingCard(30, 10, 2, 380);
+					Thread.sleep(200);
+					viewCardList.get(1).startMovingCard(30, 10, 67, 380);
+					Thread.sleep(200);
+					viewCardList.get(2).startMovingCard(30, 10, 132, 380);
+					Thread.sleep(200);
+					viewCardList.get(3).startMovingCard(30, 10, 197, 380);
+					Thread.sleep(200);
+					viewCardList.get(4).startMovingCard(30, 10, 262, 380);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		}).start();
+
 	}
 
 
